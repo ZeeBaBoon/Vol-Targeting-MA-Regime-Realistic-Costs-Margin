@@ -100,22 +100,28 @@ def fig_drawdown(eq):
 
 
 def fig_ladder(ladder, comp):
-    lad = ladder.pivot(index="strategy", columns="period", values="Sharpe")["test"]
-    base = comp[(comp.strategy.str.startswith("Base")) & (comp.period == "test")].Sharpe.iloc[0]
+    lad = ladder.pivot(index="strategy", columns="period", values="Sharpe")
+    base = comp[comp.strategy.str.startswith("Base")].set_index("period").Sharpe
     steps = [s.split("  ", 1)[1].replace(" (", "\n(") for s in lad.index]
-    fig, ax = plt.subplots(figsize=(8, 3.8))
+    fig, ax = plt.subplots(figsize=(8.5, 4.2))
     x = np.arange(len(steps))
-    ax.bar(x, lad.values, width=0.42, color=CAT[0], zorder=2)
-    for xx, v in zip(x, lad.values):
-        ax.text(xx, v - 0.025, f"{v:.2f}", ha="center", va="top", fontsize=10.5, color="white", fontweight="bold", zorder=4)
-    ax.axhline(base, color=INK2, lw=1, zorder=3)
-    ax.set_xlim(-0.5, len(steps) - 0.5 + 0.9)
-    ax.text(len(steps) - 0.5 + 0.05, base, f"plain 50/50\n{base:.2f}", ha="left", va="center", fontsize=9.5, color=INK2)
+    w = 0.36
+    for i, (p, col, lab) in enumerate((("train", CAT[0], "train 2005-2015"), ("test", CAT[1], "test 2016-2026"))):
+        xs = x + (i - 0.5) * w
+        ax.bar(xs, lad[p], width=w - 0.05, color=col, label=lab, zorder=2)
+        for xx, v in zip(xs, lad[p]):
+            ax.text(xx, v - 0.025, f"{v:.2f}", ha="center", va="top", fontsize=9.5, color="white",
+                    fontweight="bold", zorder=4)
+        ax.hlines(base[p], -0.5, len(steps) - 0.5, color=col, lw=1.2, alpha=0.8, zorder=3)
+        ax.text(len(steps) - 0.5 + 0.05, base[p], f"50/50 {p}: {base[p]:.2f}", ha="left", va="center",
+                fontsize=9, color=INK2)
+    ax.set_xlim(-0.5, len(steps) - 0.5 + 1.1)
+    ax.set_ylim(0, lad.values.max() * 1.15)
     ax.set_xticks(x, steps)
-    ax.set_ylim(0, max(lad.max(), base) * 1.18)
-    ax.set_ylabel("Sharpe ratio, 2016-2026")
+    ax.set_ylabel("Sharpe ratio (excess of T-bills)")
+    ax.legend(loc="upper right", ncol=2)
     _title(ax, "Costs eat the whole vol-targeting advantage",
-           "vol targeting, adding one real-world cost at a time (left to right)")
+           "vol targeting, adding one real-world cost at a time; lines = plain 50/50 in the same period")
     _save(fig, "3_realism_ladder.png")
 
 
