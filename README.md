@@ -1,49 +1,43 @@
-# QT/QR — Vol Targeting + MA Regime CAP (Realistic Costs & Margin)
+# Vol targeting + MA regime cap, with realistic costs and margin
 
-This repo contains a **from-scratch research pipeline** for a levered volatility-target overlay on a 2-asset portfolio (default: SPY/TLT 50/50), with an emphasis on **implementation realism** rather than idealized backtests.
+Does a levered volatility-target overlay on a 50/50 SPY/TLT portfolio still pay off once you
+model trading costs, T-bill-based financing, margin calls and execution lag, and pick
+parameters only on past data?
 
-**Demo output: see demo_output/report.md**
+**Result (out of sample, 2016–2026):**
+- **No reliable return edge:** Sharpe 0.52 vs 0.50 for plain 50/50, t = 0.35.
+- **Shallower drawdowns:** −23% vs −29%.
+- **The trend filter adds nothing;** whether the overlay is worth running depends on your
+  borrowing rate.
 
-The script produces a full `report.md` with plots and tables, including:
-- Base benchmark (no leverage)
-- Best-case benchmark (no costs, no margin)
-- A realism ladder (trading costs → borrow costs → margin constraints)
-- MA regime CAP sweeps (MA200/MA300/MA400 × no-trade band 0.00–0.30)
-- SIMPLE vs HYSTERESIS gating comparison
-- Auto-selected “best” configuration under constraints
-- Borrow-rate sensitivity analysis
+**→ Full write-up: [REPORT.md](REPORT.md)**
 
-## Why this project
-Leverage strategies often look good until you model:
-- **Execution lag** (no lookahead)
-- **True notional turnover costs** (not just |Δleverage|)
-- **Financing drag** via negative cash
-- **Margin constraints** including path-dependent maintenance deleveraging
+![Realism ladder](reports/figures/3_realism_ladder.png)
 
-This repo is a compact template to test whether an overlay survives those frictions.
+## Quick start
 
-## How to run
-
-### Install
 ```bash
-pip install numpy pandas matplotlib yfinance tabulate
-```
-### Run
-```bash
-py lev_vol_target.py
+uv run voltarget all      # download prices (first run), run all experiments, draw charts
+uv run pytest             # 6 tests: no look-ahead, execution lag, accounting, band, margin, gate
 ```
 
-## Reusability: change tickers + weights (and the regime driver)
+## Layout
 
-This pipeline is designed to run on any **2‑asset universe**.
+| Path | Purpose |
+|---|---|
+| `src/voltarget/config.py` | All parameters, the train/test split and the frictions |
+| `signals.py` | Vol-target leverage, simple and hysteresis MA gates, regime cap (no look-ahead) |
+| `simulate.py` | Daily account: cash + holdings, trading costs, financing, initial and maintenance margin, one-day lag |
+| `metrics.py` | CAGR, volatility, Sharpe in excess of T-bills, max drawdown, turnover, cost breakdown |
+| `experiments.py` | 96-setting sweep, pre-registered selection, benchmarks, realism ladder, cost sensitivity, ablation |
+| `figures.py` | Charts in `reports/figures/` |
+| `reports/tables/` | All result tables (CSV) and `summary.json` |
 
-To change inputs, edit the `Universe` config in `lev_vol_target.py`:
-- `tickers`: a tuple of two tickers (example: `("QQQ", "TLT")`)
-- `base_weights`: matching weights that sum to 1 (example: `(0.60, 0.40)`)
+## Use it on other assets
 
-**Regime driver:** the script uses the **first ticker** as the MA regime signal (risk-on/risk-off).  
-Examples:
-- `("SPY", "TLT")` → SPY drives the regime gate  
-- `("QQQ", "TLT")` → QQQ drives the regime gate  
+Edit `TICKERS` in `config.py`. The first ticker drives the MA regime gate. Adjust `Frictions`
+(trading bp, borrow spread, margin) to match your broker.
 
-When changing assets, consider adjusting `Costs(...)` and `Margin(...)` to reflect instrument-specific financing, liquidity, and broker rules.
+## License
+
+[MIT](LICENSE). Price data comes from Yahoo Finance via `yfinance` and is not included.

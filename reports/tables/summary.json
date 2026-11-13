@@ -1,0 +1,16 @@
+{
+  "test_selected_minus_base_annual_return": 0.0046,
+  "test_selected_minus_base_t_stat": 0.35,
+  "sim_start": "2005-08-08",
+  "data_end": "2026-10-30",
+  "selected": {
+    "ma": 400,
+    "gate": "simple",
+    "band": 0.3
+  },
+  "static_leverage": 1.042,
+  "train_test_sharpe_rank_corr": 0.285,
+  "selected_test_rank": "25 of 96",
+  "configs_beating_base_test_sharpe": 48,
+  "n_configs": 96
+}
