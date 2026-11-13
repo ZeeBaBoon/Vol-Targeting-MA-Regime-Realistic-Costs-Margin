@@ -3,6 +3,7 @@
 import json
 
 import matplotlib
+import matplotlib.colors
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -172,3 +173,63 @@ def run():
     fig_ladder(pd.read_csv(T / "ladder.csv"), comp)
     fig_overfit(sweep, comp, summary)
     fig_band(pd.read_csv(T / "ablation_band_no_ma.csv"), sweep, comp)
+    fig_cost_grid(pd.read_csv(T / "cost_sensitivity.csv"))
+    fig_setting_grid(sweep, comp)
+
+
+DIVERGING = matplotlib.colors.LinearSegmentedColormap.from_list("div", ["#eb6834", "#f0efec", "#2a78d6"])
+
+
+def _heat(ax, vals, labels, row_lab, col_lab, lim):
+    im = ax.imshow(vals, cmap=DIVERGING, vmin=-lim, vmax=lim, aspect="auto")
+    ax.set_xticks(range(len(col_lab)), col_lab)
+    ax.set_yticks(range(len(row_lab)), row_lab)
+    ax.tick_params(length=0)
+    ax.grid(False)
+    for (i, j), t in np.ndenumerate(labels):
+        strong = abs(vals[i, j]) > lim * 0.55
+        ax.text(j, i, t, ha="center", va="center", fontsize=9, color="white" if strong else INK)
+    for k in range(vals.shape[0] + 1):                        # 2px surface gap between cells
+        ax.axhline(k - 0.5, color=SURFACE, lw=2)
+    for k in range(vals.shape[1] + 1):
+        ax.axvline(k - 0.5, color=SURFACE, lw=2)
+    return im
+
+
+def fig_cost_grid(sens):
+    sel = sens[sens.strategy == "Selected"].pivot(index="borrow_spread", columns="trading_bps", values="Sharpe")
+    base = sens[sens.strategy == "Base 50/50"].pivot(index="borrow_spread", columns="trading_bps", values="Sharpe")
+    diff = (sel - base).to_numpy()
+    labels = np.array([[f"{s:.2f}\n({d:+.2f})" for s, d in zip(rs, rd)]
+                       for rs, rd in zip(sel.to_numpy(), diff)])
+    fig, ax = plt.subplots(figsize=(7.2, 5.2))
+    im = _heat(ax, diff, labels, [f"T-bill + {v:.1%}" for v in sel.index],
+               [f"{v:g} bp" for v in sel.columns], np.nanmax(np.abs(diff)))
+    ax.set_xlabel("trading cost per unit traded")
+    ax.set_ylabel("borrowing rate")
+    cb = fig.colorbar(im, ax=ax, shrink=0.8, pad=0.02)
+    cb.set_label("Sharpe vs plain 50/50", color=INK2)
+    cb.outline.set_visible(False)
+    _title(ax, "Whether it pays depends on your broker",
+           "strategy's test Sharpe 2016-2026 (difference vs plain 50/50); blue = better, orange = worse")
+    _save(fig, "6_cost_grid.png")
+
+
+def fig_setting_grid(sweep, comp):
+    t = sweep[sweep.period == "test"].copy()
+    base = comp[(comp.strategy.str.startswith("Base")) & (comp.period == "test")].Sharpe.iloc[0]
+    t["col"] = "MA" + t.ma.astype(str) + "\n" + t.gate
+    piv = t.pivot(index="band", columns="col", values="Sharpe")
+    piv = piv[[f"MA{m}\n{g}" for g in ("simple", "hyst") for m in (200, 300, 400)]]
+    diff = (piv - base).to_numpy()
+    labels = np.vectorize(lambda v: f"{v:.2f}")(piv.to_numpy())
+    fig, ax = plt.subplots(figsize=(7.2, 7.4))
+    im = _heat(ax, diff, labels, [f"{b:.2f}" for b in piv.index], list(piv.columns), np.nanmax(np.abs(diff)))
+    ax.set_xlabel("trend filter (moving average, gate type)")
+    ax.set_ylabel("no-trade band")
+    cb = fig.colorbar(im, ax=ax, shrink=0.6, pad=0.02)
+    cb.set_label("Sharpe vs plain 50/50", color=INK2)
+    cb.outline.set_visible(False)
+    _title(ax, "All 96 settings on the test period",
+           f"test Sharpe 2016-2026; plain 50/50 = {base:.2f}; blue = better, orange = worse")
+    _save(fig, "7_setting_grid.png")

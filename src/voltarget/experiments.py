@@ -96,7 +96,7 @@ def run() -> dict:
 
     # --- cost sensitivity, test period ---
     sens = []
-    for spread, bps in product((0.005, 0.015, 0.03), (2.0, 10.0)):
+    for spread, bps in product((0.0, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04), (0.0, 2.0, 5.0, 10.0, 20.0)):
         f = replace(Frictions(), borrow_spread=spread, trading_bps=bps)
         for n, tgt, band in (("Base 50/50", const(1.0), 0.0), ("Selected", S.target(sel), sel.band),
                              ("Static leverage", const(static_lev), 0.0)):

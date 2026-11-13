@@ -119,6 +119,11 @@ The chart adds one friction at a time to vol-target only:
 - **The selected setting ranks 25th of 96 on test,** better than average but far from the top.
 - **48 of 96 settings beat 50/50 on test,** exactly a coin flip.
 
+![All settings](reports/figures/7_setting_grid.png)
+
+The colours follow the rows (the band), not the columns (the trend filter). In other words,
+what matters is how often you trade, not which filter you use.
+
 ### 4.4 Which component matters (post hoc ablation)
 
 ![Band ablation](reports/figures/5_band_ablation.png)
@@ -131,6 +136,15 @@ The chart adds one friction at a time to vol-target only:
   as the lesson, not a specific number.
 
 ### 4.5 Sensitivity to broker costs (test Sharpe)
+
+![Cost grid](reports/figures/6_cost_grid.png)
+
+The strategy beats 50/50 (blue) only when costs stay low:
+- **at 10 bp trading cost,** only while borrowing is at most T-bill + 2%;
+- **at 20 bp,** practically never;
+- **even at the cheapest settings,** the gain is at most +0.11 Sharpe.
+
+The table covers the middle of the grid; the baseline is in bold:
 
 | Borrow spread over T-bill | Trading cost | Base 50/50 | Selected | Static 1.04x |
 |---|---|---|---|---|
